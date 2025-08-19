@@ -1,8 +1,30 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { Form, Input, Button, message, DatePicker, Select, Modal } from "antd";
+import moment from "moment";
+// import { useNavigate } from "react-router";
+
+const { Option } = Select;
+
+interface Todo {
+  _id: string;
+  title: string;
+  description?: string;
+  dueDate?: string;
+  priority: "low" | "medium" | "high";
+  status: "pending" | "done";
+  userId: string;
+}
+
+interface UpdateTodoFormValues {
+  title: string;
+  description?: string;
+  dueDate?: moment.Moment;
+  priority: "low" | "medium" | "high";
+}
 
 const TodoList: React.FC = () => {
-  const [todos, setTodos] = useState<any[]>([]);
+  const [todos, setTodos] = useState<Todo[]>([]);
   const [filters, setFilters] = useState({
     status: "",
     priority: "",
@@ -14,16 +36,29 @@ const TodoList: React.FC = () => {
     limit: 5,
   });
   const [pagination, setPagination] = useState<any>(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
+  const [form] = Form.useForm<UpdateTodoFormValues>();
+  //   const navigate = useNavigate();
 
   const fetchTodos = async () => {
     try {
+      //   const token = localStorage.getItem("token");
+      //   if (!token) {
+      //     message.error("Please sign in to view todos");
+      //     navigate("/signin");
+      //     return;
+      //   }
+
       const res = await axios.get("http://localhost:3000/todos", {
+        // headers: { Authorization: `Bearer ${token}` },
         params: filters,
       });
       setTodos(res.data.data);
       setPagination(res.data.pagination);
     } catch (err) {
-      console.error(err);
+      console.error("Fetch Todos Error:", err);
+      message.error("Error fetching todos");
     }
   };
 
@@ -32,13 +67,63 @@ const TodoList: React.FC = () => {
   }, [filters]);
 
   const handleDelete = async (id: string) => {
-    await axios.delete(`http://localhost:3000/todos/${id}`);
-    fetchTodos();
+    try {
+      //   const token = localStorage.getItem("token");
+      //   if (!token) {
+      //     message.error("Please sign in to delete a todo");
+      //     navigate("/signin");
+      //     return;
+      //   }
+
+      await axios.delete(`http://localhost:3000/todos/${id}`, {
+        // headers: { Authorization: `Bearer ${token}` },
+      });
+      message.success("Todo deleted successfully");
+      fetchTodos();
+    } catch (err) {
+      console.error("Delete Todo Error:", err);
+      message.error("Error deleting todo");
+    }
   };
 
-  const handleUpdate = async (id: string, updates: any) => {
-    await axios.put(`http://localhost:3000/todos/${id}`, updates);
-    fetchTodos();
+  const handleUpdate = (todo: Todo) => {
+    setSelectedTodo(todo);
+    form.setFieldsValue({
+      title: todo.title,
+      description: todo.description,
+      dueDate: todo.dueDate ? moment(todo.dueDate) : undefined,
+      priority: todo.priority,
+    });
+    setIsModalVisible(true);
+  };
+
+  const handleUpdateSubmit = async (values: UpdateTodoFormValues) => {
+    try {
+      const payload = {
+        ...values,
+        dueDate: values.dueDate ? values.dueDate.toISOString() : undefined,
+      };
+
+      console.log("Update Payload:", payload);
+
+      await axios.put(
+        `http://localhost:3000/todos/${selectedTodo?._id}`,
+        payload
+      );
+      message.success("Todo updated successfully");
+      setIsModalVisible(false);
+      form.resetFields();
+      fetchTodos();
+    } catch (err: any) {
+      console.error("Update Todo Error:", err.response?.data);
+      message.error(err.response?.data?.message || "Error updating todo");
+    }
+  };
+
+  const handleCancel = () => {
+    setIsModalVisible(false);
+    form.resetFields();
+    setSelectedTodo(null);
   };
 
   return (
@@ -110,6 +195,12 @@ const TodoList: React.FC = () => {
             </div>
             <div className="flex gap-2">
               <button
+                onClick={() => handleUpdate(todo)}
+                className="bg-blue-500 text-white px-2 rounded"
+              >
+                Update
+              </button>
+              <button
                 onClick={() => handleUpdate(todo._id, { status: "done" })}
                 className="bg-green-500 text-white px-2 rounded"
               >
@@ -125,6 +216,67 @@ const TodoList: React.FC = () => {
           </li>
         ))}
       </ul>
+
+      {/* Update Modal */}
+      <Modal
+        title="Update Todo"
+        open={isModalVisible}
+        onCancel={handleCancel}
+        footer={null}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          name="update-todo"
+          onFinish={handleUpdateSubmit}
+          onFinishFailed={(errorInfo) => {
+            console.log("Form Failed:", errorInfo);
+            message.error("Please check the form fields!");
+          }}
+        >
+          <Form.Item
+            label="Title"
+            name="title"
+            rules={[{ required: true, message: "Please enter the todo title" }]}
+          >
+            <Input placeholder="Enter todo title" />
+          </Form.Item>
+
+          <Form.Item
+            label="Description"
+            name="description"
+            rules={[{ required: false }]}
+          >
+            <Input.TextArea placeholder="Enter todo description" rows={4} />
+          </Form.Item>
+
+          <Form.Item
+            label="Due Date"
+            name="dueDate"
+            rules={[{ required: false }]}
+          >
+            <DatePicker className="w-full" format="YYYY-MM-DD" />
+          </Form.Item>
+
+          <Form.Item
+            label="Priority"
+            name="priority"
+            rules={[{ required: true, message: "Please select a priority" }]}
+          >
+            <Select placeholder="Select priority">
+              <Option value="low">Low</Option>
+              <Option value="medium">Medium</Option>
+              <Option value="high">High</Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item>
+            <Button type="primary" htmlType="submit" block>
+              Update Todo
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
 
       {/* Pagination */}
       {pagination && (
