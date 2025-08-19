@@ -67,23 +67,8 @@ const TodoList: React.FC = () => {
   }, [filters]);
 
   const handleDelete = async (id: string) => {
-    try {
-      //   const token = localStorage.getItem("token");
-      //   if (!token) {
-      //     message.error("Please sign in to delete a todo");
-      //     navigate("/signin");
-      //     return;
-      //   }
-
-      await axios.delete(`http://localhost:3000/todos/${id}`, {
-        // headers: { Authorization: `Bearer ${token}` },
-      });
-      message.success("Todo deleted successfully");
-      fetchTodos();
-    } catch (err) {
-      console.error("Delete Todo Error:", err);
-      message.error("Error deleting todo");
-    }
+    await axios.delete(`http://localhost:3000/todos/${id}`);
+    fetchTodos();
   };
 
   const handleUpdate = (todo: Todo) => {
