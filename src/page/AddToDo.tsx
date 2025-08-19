@@ -13,13 +13,6 @@ const AddTodo: React.FC = () => {
 
   const onFinish = async (values: AddTodoFormValues) => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        message.error("Please sign in to add a todo");
-        return;
-      }
-
-      // Format dueDate if provided
       const payload = {
         ...values,
         dueDate: values.dueDate ? values.dueDate.toISOString() : undefined,
@@ -29,7 +22,6 @@ const AddTodo: React.FC = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });
