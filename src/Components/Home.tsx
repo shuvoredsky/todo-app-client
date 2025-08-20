@@ -1,4 +1,5 @@
 import AddTodo from "../page/AddToDo";
+import AllTodoList from "./AllTodoList";
 import TodoList from "./TodoList";
 
 export default function Home() {
@@ -12,6 +13,7 @@ export default function Home() {
           <TodoList></TodoList>
         </div>
       </div>
+      <AllTodoList></AllTodoList>
     </div>
   );
 }

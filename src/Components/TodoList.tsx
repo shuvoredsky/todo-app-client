@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import axios from "axios";
 import { Form, Input, Button, message, DatePicker, Select, Modal } from "antd";
 import moment from "moment";
-// import { useNavigate } from "react-router";
+import { AuthContext, type AuthContextType } from "../provider/AuthProvider";
 
 const { Option } = Select;
 
@@ -25,6 +25,7 @@ interface UpdateTodoFormValues {
 
 const TodoList: React.FC = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
+
   const [filters, setFilters] = useState({
     status: "",
     priority: "",
@@ -39,21 +40,23 @@ const TodoList: React.FC = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
   const [form] = Form.useForm<UpdateTodoFormValues>();
-  //   const navigate = useNavigate();
+  const authContext = useContext<AuthContextType | null>(AuthContext);
 
+  const user = authContext?.user;
+  const userEmail = user?.email;
+  console.log(userEmail);
   const fetchTodos = async () => {
     try {
-      //   const token = localStorage.getItem("token");
-      //   if (!token) {
-      //     message.error("Please sign in to view todos");
-      //     navigate("/signin");
-      //     return;
-      //   }
+      if (!userEmail) {
+        console.log("No user email yet, skipping fetch");
+        return;
+      }
 
-      const res = await axios.get("http://localhost:3000/todos", {
-        // headers: { Authorization: `Bearer ${token}` },
-        params: filters,
+      console.log("Fetching todos for:", userEmail);
+      const res = await axios.get("http://localhost:3000/todos/me", {
+        params: { ...filters, userEmail },
       });
+
       setTodos(res.data.data);
       setPagination(res.data.pagination);
     } catch (err) {
@@ -63,35 +66,66 @@ const TodoList: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchTodos();
-  }, [filters]);
+    if (userEmail) {
+      fetchTodos();
+    }
+  }, [filters, userEmail]);
 
   const handleDelete = async (id: string) => {
-    await axios.delete(`http://localhost:3000/todos/${id}`);
-    fetchTodos();
+    try {
+      await axios.delete(`http://localhost:3000/todos/${id}`);
+      message.success("Todo deleted successfully");
+      fetchTodos();
+    } catch (err) {
+      console.error("Delete Todo Error:", err);
+      message.error("Error deleting todo");
+    }
   };
 
   const handleUpdate = async (id: string, updates: any) => {
-    await axios.put(`http://localhost:3000/todos/${id}`, updates);
-    fetchTodos();
+    try {
+      console.log("Update Payload:", updates); // Debug
+      await axios.put(`http://localhost:3000/todos/${id}`, updates);
+      message.success("Todo updated successfully");
+      fetchTodos();
+    } catch (err: any) {
+      console.error("Update Todo Error:", err.response?.data);
+      message.error(err.response?.data?.message || "Error updating todo");
+    }
+  };
+
+  const handleUpdateClick = (todo: Todo) => {
+    setSelectedTodo(todo);
+    setIsModalVisible(true);
+    form.setFieldsValue({
+      title: todo.title,
+      description: todo.description,
+      dueDate: todo.dueDate ? moment(todo.dueDate) : undefined,
+      priority: todo.priority,
+    });
   };
 
   const handleUpdateSubmit = async (values: UpdateTodoFormValues) => {
+    if (!selectedTodo?._id) {
+      message.error("Invalid Todo ID");
+      return;
+    }
+
     try {
       const payload = {
         ...values,
         dueDate: values.dueDate ? values.dueDate.toISOString() : undefined,
       };
 
-      console.log("Update Payload:", payload);
-
+      console.log("Update Payload:", payload); // Debug
       await axios.put(
-        `http://localhost:3000/todos/${selectedTodo?._id}`,
+        `http://localhost:3000/todos/${selectedTodo._id}`,
         payload
       );
       message.success("Todo updated successfully");
       setIsModalVisible(false);
       form.resetFields();
+      setSelectedTodo(null);
       fetchTodos();
     } catch (err: any) {
       console.error("Update Todo Error:", err.response?.data);
@@ -174,11 +208,12 @@ const TodoList: React.FC = () => {
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => handleUpdate(todo)}
+                onClick={() => handleUpdateClick(todo)}
                 className="bg-blue-500 text-white px-2 rounded"
               >
                 Update
               </button>
+
               <button
                 onClick={() => handleUpdate(todo._id, { status: "done" })}
                 className="bg-green-500 text-white px-2 rounded"

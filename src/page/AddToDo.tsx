@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import { Form, Input, Button, message, DatePicker, Select, Modal } from "antd";
 import moment from "moment";
-// import { useNavigate } from "react-router";
+import { AuthContext } from "../provider/AuthProvider";
+import type { AuthContextType } from "../provider/AuthProvider";
 
 const { Option } = Select;
 
@@ -10,12 +11,15 @@ interface AddTodoFormValues {
   description?: string;
   dueDate?: moment.Moment;
   priority: "low" | "medium" | "high";
+  userEmail: string; // Add userEmail to the form values interface
 }
 
 const AddTodo: React.FC = () => {
+  const authContext = useContext<AuthContextType | null>(AuthContext);
+  const user = authContext?.user;
+  const userEmail = user?.email;
   const [form] = Form.useForm<AddTodoFormValues>();
   const [isModalVisible, setIsModalVisible] = useState(false);
-  //   const navigate = useNavigate();
 
   const showModal = () => {
     setIsModalVisible(true);
@@ -28,17 +32,10 @@ const AddTodo: React.FC = () => {
 
   const onFinish = async (values: AddTodoFormValues) => {
     try {
-      //   const token = localStorage.getItem("token");
-      //   if (!token) {
-      //     message.error("Please sign in to add a todo");
-      //     navigate("/signin");
-      //     return;
-      //   }
-
-      // Format dueDate if provided
       const payload = {
         ...values,
         dueDate: values.dueDate ? values.dueDate.toISOString() : undefined,
+        userEmail: userEmail, // Include userEmail in the payload
       };
 
       console.log("Payload:", payload);
@@ -47,7 +44,6 @@ const AddTodo: React.FC = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          //   Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });
@@ -90,6 +86,7 @@ const AddTodo: React.FC = () => {
           name="add-todo"
           onFinish={onFinish}
           onFinishFailed={onFinishFailed}
+          initialValues={{ userEmail: userEmail }} // Set initial value for userEmail
         >
           <Form.Item
             label="Title"
@@ -97,6 +94,10 @@ const AddTodo: React.FC = () => {
             rules={[{ required: true, message: "Please enter the todo title" }]}
           >
             <Input placeholder="Enter todo title" />
+          </Form.Item>
+
+          <Form.Item label="Your Email" name="userEmail">
+            <Input readOnly value={userEmail} placeholder="Your email" />
           </Form.Item>
 
           <Form.Item

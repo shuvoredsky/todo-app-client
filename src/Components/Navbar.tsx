@@ -1,80 +1,50 @@
-import React, { useEffect, useState } from "react";
-import { Layout, Menu, Button, Space } from "antd";
-import {
-  UnorderedListOutlined,
-  HomeOutlined,
-  LogoutOutlined,
-  UserOutlined,
-} from "@ant-design/icons";
+import React, { useContext } from "react";
+import { Layout, Space } from "antd";
+import { UserOutlined } from "@ant-design/icons";
+import { AuthContext } from "../provider/AuthProvider";
+import type { AuthContextType } from "../provider/AuthProvider";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router";
 
 const { Header } = Layout;
 
-interface User {
-  _id: string;
-  email: string;
-  name: string;
-  role: string;
-}
-
 const Navbar: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const authContext = useContext<AuthContextType | null>(AuthContext);
+  const navigate = useNavigate();
 
-  // Fetch user data from API
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const res = await fetch("http://localhost:3000/users");
-        const data = await res.json();
-        console.log(data);
-        if (Array.isArray(data) && data.length > 0) {
-          setUser(data[0]);
-        }
-      } catch (err) {
-        console.error("Error fetching users:", err);
-      }
-    };
-    fetchUser();
-  }, []);
+  const user = authContext?.user;
+  const logOut = authContext?.logOut;
 
-  const menuItems = [
-    { key: "1", label: "Home", icon: <HomeOutlined /> },
-    { key: "2", label: "Tasks", icon: <UnorderedListOutlined /> },
-  ];
-  console.log(user);
+  const handleLogOut = () => {
+    if (!logOut) return;
+    logOut()
+      .then(() => toast.success("Sign out successfully"))
+      .catch((error: any) => toast.error(error.message));
+    navigate("/sign-in");
+  };
 
   return (
     <Layout>
       <Header className="flex justify-between items-center px-4 bg-blue-600">
-        {/* বাম পাশে logo বা menu */}
         <div className="text-white text-lg font-bold">Todo App</div>
 
-        {/* মাঝখানে Menu */}
-        <Menu
-          theme="dark"
-          mode="horizontal"
-          items={menuItems}
-          className="flex-1 bg-blue-600"
-          style={{ justifyContent: "center", backgroundColor: "transparent" }}
-        />
-
-        {/* ডান পাশে User Info + Logout */}
         <div className="flex items-center space-x-4">
           {user ? (
             <Space>
               <UserOutlined style={{ color: "white" }} />
-              <span className="text-white font-medium">{user.name}</span>
+              <span className="text-white font-medium">
+                {user.displayName || user.email}
+              </span>
+              <button
+                onClick={handleLogOut}
+                className="block  text-left text-error"
+              >
+                Logout
+              </button>
             </Space>
           ) : (
-            <span className="text-gray-300">Loading...</span>
+            <span className="text-gray-300">No User</span>
           )}
-          <Button
-            type="primary"
-            icon={<LogoutOutlined />}
-            danger
-            onClick={() => console.log("Demo Logout Clicked")}
-          >
-            Logout
-          </Button>
         </div>
       </Header>
     </Layout>

@@ -1,6 +1,9 @@
-import React from "react";
+import React, { useContext, useState } from "react";
 import { Form, Input, Button, message } from "antd";
 import { useNavigate } from "react-router";
+import { AuthContext } from "../provider/AuthProvider";
+import type { AuthContextType } from "../provider/AuthProvider";
+import { toast } from "react-toastify";
 
 interface SignInFormValues {
   email: string;
@@ -8,33 +11,24 @@ interface SignInFormValues {
 }
 
 const SignIn: React.FC = () => {
+  const authContext = useContext<AuthContextType | null>(AuthContext);
+  const signIn = authContext?.signIn;
   const [form] = Form.useForm<SignInFormValues>();
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const onFinish = async (values: SignInFormValues) => {
+    if (!signIn) return;
+
     try {
-      console.log("Form Values:", values);
-
-      const response = await fetch("http://localhost:3000/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(values),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        message.success("Sign In Successful!");
-        form.resetFields();
-        navigate("/");
-      } else {
-        message.error(data.message || "Sign In Failed!");
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      message.error("Error connecting to server!");
+      await signIn(values.email, values.password);
+      toast.success("User Login Successful!");
+      form.resetFields();
+      navigate("/");
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Login Failed!");
+      toast.error(err.message || "Login Failed!");
     }
   };
 
@@ -74,6 +68,8 @@ const SignIn: React.FC = () => {
         >
           <Input.Password placeholder="********" />
         </Form.Item>
+
+        {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
 
         <Form.Item>
           <Button type="primary" htmlType="submit" block>
