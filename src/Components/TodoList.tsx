@@ -44,7 +44,6 @@ const TodoList: React.FC = () => {
 
   const user = authContext?.user;
   const userEmail = user?.email;
-  console.log(userEmail);
   const fetchTodos = async () => {
     try {
       if (!userEmail) {

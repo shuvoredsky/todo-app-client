@@ -36,7 +36,7 @@ const AllTodoList: React.FC = () => {
       const res = await axios.get("http://localhost:3000/todos", {
         params: filters,
       });
-      console.log("Fetch Todos Response:", res.data); // Debug
+      // console.log("Fetch Todos Response:", res.data); // Debug
       setTodos(res.data.data);
       setPagination(res.data.pagination);
     } catch (err) {
