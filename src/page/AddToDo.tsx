@@ -3,6 +3,7 @@ import { Form, Input, Button, message, DatePicker, Select, Modal } from "antd";
 import moment from "moment";
 import { AuthContext } from "../provider/AuthProvider";
 import type { AuthContextType } from "../provider/AuthProvider";
+import useAxiosSecure from "../Components/hook/useAxiosSecure";
 
 const { Option } = Select;
 
@@ -20,6 +21,7 @@ const AddTodo: React.FC = () => {
   const userEmail = user?.email;
   const [form] = Form.useForm<AddTodoFormValues>();
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const axiosSecure = useAxiosSecure();
 
   const showModal = () => {
     setIsModalVisible(true);
@@ -35,20 +37,12 @@ const AddTodo: React.FC = () => {
       const payload = {
         ...values,
         dueDate: values.dueDate ? values.dueDate.toISOString() : undefined,
-        userEmail: userEmail, // Include userEmail in the payload
+        userEmail: userEmail,
       };
 
-      console.log("Payload:", payload);
+      const response = await axiosSecure.post("/todos", payload);
 
-      const response = await fetch("http://localhost:3000/todos", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json();
+      const data = response.data;
       console.log("Response:", data);
 
       if (data.success) {
@@ -59,7 +53,7 @@ const AddTodo: React.FC = () => {
         message.error(data.message || "Failed to add todo");
       }
     } catch (error) {
-      console.error("Fetch Error:", error);
+      console.error("Axios Error:", error);
       message.error("Error connecting to server");
     }
   };

@@ -6,13 +6,19 @@ import {
   signOut,
   signInWithEmailAndPassword,
   updateProfile,
+  type User as FirebaseUser,
+  type UserProfile,
 } from "firebase/auth";
-import type { User, UserProfile } from "firebase/auth";
 import app from "../firebase/firebase-init";
 
 export type AuthContextType = {
-  user: User | null;
-  setUser: React.Dispatch<React.SetStateAction<User | null>>;
+  user: { email: string | null; accessToken: string | null } | null;
+  setUser: React.Dispatch<
+    React.SetStateAction<{
+      email: string | null;
+      accessToken: string | null;
+    } | null>
+  >;
   createUser: (email: string, password: string) => Promise<any>;
   signIn: (email: string, password: string) => Promise<any>;
   updateUser: (updateData: UserProfile) => Promise<void>;
@@ -21,7 +27,6 @@ export type AuthContextType = {
   setLoading: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
-// Context runtime export
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 interface AuthProviderProps {
@@ -31,7 +36,10 @@ interface AuthProviderProps {
 const auth = getAuth(app);
 
 const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<{
+    email: string | null;
+    accessToken: string | null;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   const createUser = (email: string, password: string) => {
@@ -51,21 +59,34 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logOut = () => {
     setLoading(true);
-    return signOut(auth);
+    return signOut(auth).then(() => {
+      setUser(null);
+      console.log("User logged out"); // Debug
+    });
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-
-      if (currentUser) {
-        const token = await currentUser.getIdToken();
-        localStorage.setItem("access-token", token);
-      } else {
-        localStorage.removeItem("access-token");
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      async (currentUser: FirebaseUser | null) => {
+        if (currentUser) {
+          try {
+            const accessToken = await currentUser.getIdToken();
+            setUser({
+              email: currentUser.email,
+              accessToken,
+            });
+          } catch (error) {
+            console.error("Error getting access token:", error); // Debug
+            setUser(null);
+          }
+        } else {
+          setUser(null);
+          console.log("No user authenticated"); // Debug
+        }
+        setLoading(false);
       }
-    });
+    );
 
     return () => unsubscribe();
   }, []);

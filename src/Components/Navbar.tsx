@@ -1,8 +1,8 @@
 import React, { useContext } from "react";
-import { Layout, Space } from "antd";
+import { Layout, Space, Button } from "antd";
 import { UserOutlined } from "@ant-design/icons";
-import { AuthContext } from "../provider/AuthProvider";
-import type { AuthContextType } from "../provider/AuthProvider";
+import { AuthContext, type AuthContextType } from "../provider/AuthProvider";
+
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router";
 
@@ -18,8 +18,18 @@ const Navbar: React.FC = () => {
   const handleLogOut = () => {
     if (!logOut) return;
     logOut()
-      .then(() => toast.success("Sign out successfully"))
+      .then(() => {
+        toast.success("Sign out successfully");
+        navigate("/sign-in");
+      })
       .catch((error: any) => toast.error(error.message));
+  };
+
+  const handleSignUp = () => {
+    navigate("/sign-up");
+  };
+
+  const handleSignIn = () => {
     navigate("/sign-in");
   };
 
@@ -33,17 +43,33 @@ const Navbar: React.FC = () => {
             <Space>
               <UserOutlined style={{ color: "white" }} />
               <span className="text-white font-medium">
-                {user.displayName || user.email}
+                {user?.displayName || "User"}
               </span>
-              <button
+              <Button
+                type="text"
+                className="text-white font-bold hover:text-red-300"
                 onClick={handleLogOut}
-                className="block  text-left text-error"
               >
                 Logout
-              </button>
+              </Button>
             </Space>
           ) : (
-            <span className="text-gray-300">No User</span>
+            <Space>
+              <Button
+                type="primary"
+                className="bg-blue-500 hover:bg-blue-700 text-white font-bold"
+                onClick={handleSignIn}
+              >
+                Sign In
+              </Button>
+              <Button
+                type="default"
+                className="text-blue-600 font-bold border-blue-600 hover:bg-blue-100"
+                onClick={handleSignUp}
+              >
+                Sign Up
+              </Button>
+            </Space>
           )}
         </div>
       </Header>

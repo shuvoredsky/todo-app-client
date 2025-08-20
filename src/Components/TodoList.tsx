@@ -1,8 +1,21 @@
 import React, { useContext, useEffect, useState } from "react";
-import axios from "axios";
-import { Form, Input, Button, message, DatePicker, Select, Modal } from "antd";
+import {
+  Form,
+  Input,
+  Button,
+  message,
+  DatePicker,
+  Select,
+  Modal,
+  List,
+  Card,
+  Spin,
+  Alert,
+  Pagination,
+} from "antd";
 import moment from "moment";
 import { AuthContext, type AuthContextType } from "../provider/AuthProvider";
+import useAxiosSecure from "./hook/useAxiosSecure";
 
 const { Option } = Select;
 
@@ -25,7 +38,9 @@ interface UpdateTodoFormValues {
 
 const TodoList: React.FC = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
-
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const axiosSecure = useAxiosSecure();
   const [filters, setFilters] = useState({
     status: "",
     priority: "",
@@ -41,18 +56,20 @@ const TodoList: React.FC = () => {
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
   const [form] = Form.useForm<UpdateTodoFormValues>();
   const authContext = useContext<AuthContextType | null>(AuthContext);
-
   const user = authContext?.user;
   const userEmail = user?.email;
-  const fetchTodos = async () => {
-    try {
-      if (!userEmail) {
-        console.log("No user email yet, skipping fetch");
-        return;
-      }
 
-      console.log("Fetching todos for:", userEmail);
-      const res = await axios.get("http://localhost:3000/todos/me", {
+  const fetchTodos = async () => {
+    if (!userEmail) {
+      setError("Please sign in to view todos");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await axiosSecure.get("/todos/me", {
         params: { ...filters, userEmail },
       });
 
@@ -60,36 +77,25 @@ const TodoList: React.FC = () => {
       setPagination(res.data.pagination);
     } catch (err) {
       console.error("Fetch Todos Error:", err);
+      setError("Error fetching todos");
       message.error("Error fetching todos");
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (userEmail) {
-      fetchTodos();
-    }
+    fetchTodos();
   }, [filters, userEmail]);
 
   const handleDelete = async (id: string) => {
     try {
-      await axios.delete(`http://localhost:3000/todos/${id}`);
+      await axiosSecure.delete(`/todos/${id}`);
       message.success("Todo deleted successfully");
       fetchTodos();
     } catch (err) {
       console.error("Delete Todo Error:", err);
       message.error("Error deleting todo");
-    }
-  };
-
-  const handleUpdate = async (id: string, updates: any) => {
-    try {
-      console.log("Update Payload:", updates); // Debug
-      await axios.put(`http://localhost:3000/todos/${id}`, updates);
-      message.success("Todo updated successfully");
-      fetchTodos();
-    } catch (err: any) {
-      console.error("Update Todo Error:", err.response?.data);
-      message.error(err.response?.data?.message || "Error updating todo");
     }
   };
 
@@ -115,12 +121,7 @@ const TodoList: React.FC = () => {
         ...values,
         dueDate: values.dueDate ? values.dueDate.toISOString() : undefined,
       };
-
-      console.log("Update Payload:", payload); // Debug
-      await axios.put(
-        `http://localhost:3000/todos/${selectedTodo._id}`,
-        payload
-      );
+      await axiosSecure.put(`/todos/${selectedTodo._id}`, payload);
       message.success("Todo updated successfully");
       setIsModalVisible(false);
       form.resetFields();
@@ -138,97 +139,162 @@ const TodoList: React.FC = () => {
     setSelectedTodo(null);
   };
 
-  return (
-    <div className="p-4">
-      <h2 className="text-xl font-bold">Todos</h2>
+  const handlePaginationChange = (page: number) => {
+    setFilters({ ...filters, page });
+  };
 
-      {/* Filters */}
-      <div className="flex gap-2 my-2">
-        <select
-          value={filters.status}
-          onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-        >
-          <option value="">All Status</option>
-          <option value="pending">Pending</option>
-          <option value="done">Done</option>
-        </select>
-
-        <select
-          value={filters.priority}
-          onChange={(e) => setFilters({ ...filters, priority: e.target.value })}
-        >
-          <option value="">All Priority</option>
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
-        </select>
-
-        <input
-          type="date"
-          onChange={(e) =>
-            setFilters({ ...filters, startDate: e.target.value })
-          }
-        />
-        <input
-          type="date"
-          onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-        />
-
-        <select
-          value={filters.sortBy}
-          onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}
-        >
-          <option value="createdAt">Created At</option>
-          <option value="priority">Priority</option>
-          <option value="dueDate">Due Date</option>
-        </select>
-
-        <select
-          value={filters.order}
-          onChange={(e) => setFilters({ ...filters, order: e.target.value })}
-        >
-          <option value="desc">Desc</option>
-          <option value="asc">Asc</option>
-        </select>
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-[400px] bg-gray-100">
+        <Spin size="large" tip="Loading your todos..." />
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center min-h-[400px] bg-gray-100">
+        <Alert
+          message="Error"
+          description={error}
+          type="error"
+          showIcon
+          className="max-w-md"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto bg-gray-100 min-h-[400px]">
+      {/* Filters */}
+      <Form
+        layout="vertical"
+        className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+      >
+        <Form.Item label="Status">
+          <Select
+            value={filters.status}
+            onChange={(value) => setFilters({ ...filters, status: value })}
+            allowClear
+          >
+            <Option value="">All Status</Option>
+            <Option value="pending">Pending</Option>
+            <Option value="done">Done</Option>
+          </Select>
+        </Form.Item>
+
+        <Form.Item label="Priority">
+          <Select
+            value={filters.priority}
+            onChange={(value) => setFilters({ ...filters, priority: value })}
+            allowClear
+          >
+            <Option value="">All Priority</Option>
+            <Option value="low">Low</Option>
+            <Option value="medium">Medium</Option>
+            <Option value="high">High</Option>
+          </Select>
+        </Form.Item>
+
+        <Form.Item label="Start Date">
+          <DatePicker
+            className="w-full"
+            onChange={(date) =>
+              setFilters({
+                ...filters,
+                startDate: date ? date.format("YYYY-MM-DD") : "",
+              })
+            }
+          />
+        </Form.Item>
+
+        <Form.Item label="End Date">
+          <DatePicker
+            className="w-full"
+            onChange={(date) =>
+              setFilters({
+                ...filters,
+                endDate: date ? date.format("YYYY-MM-DD") : "",
+              })
+            }
+          />
+        </Form.Item>
+
+        <Form.Item label="Sort By">
+          <Select
+            value={filters.sortBy}
+            onChange={(value) => setFilters({ ...filters, sortBy: value })}
+          >
+            <Option value="createdAt">Created At</Option>
+            <Option value="priority">Priority</Option>
+            <Option value="dueDate">Due Date</Option>
+          </Select>
+        </Form.Item>
+
+        <Form.Item label="Order">
+          <Select
+            value={filters.order}
+            onChange={(value) => setFilters({ ...filters, order: value })}
+          >
+            <Option value="desc">Descending</Option>
+            <Option value="asc">Ascending</Option>
+          </Select>
+        </Form.Item>
+      </Form>
 
       {/* Todo List */}
-      <ul>
-        {todos.map((todo) => (
-          <li key={todo._id} className="border p-2 my-2 flex justify-between">
-            <div>
-              <p className="font-semibold">{todo.title}</p>
-              <p>Status: {todo.status}</p>
-              <p>Priority: {todo.priority}</p>
+      <List
+        grid={{ gutter: 16, xs: 1, sm: 1, md: 2, lg: 2, xl: 3 }}
+        dataSource={todos}
+        renderItem={(todo) => (
+          <List.Item>
+            <Card
+              title={todo.title}
+              className="shadow-md"
+              actions={[
+                <Button
+                  type="link"
+                  onClick={() => handleUpdateClick(todo)}
+                  className="text-blue-500"
+                >
+                  Update
+                </Button>,
+                <Button
+                  type="link"
+                  onClick={() => handleUpdate(todo._id, { status: "done" })}
+                  className="text-green-500"
+                >
+                  Done
+                </Button>,
+                <Button
+                  type="link"
+                  onClick={() => handleDelete(todo._id)}
+                  className="text-red-500"
+                >
+                  Delete
+                </Button>,
+              ]}
+            >
               <p>
-                Due:{" "}
+                <strong>Status:</strong> {todo.status}
+              </p>
+              <p>
+                <strong>Priority:</strong> {todo.priority}
+              </p>
+              <p>
+                <strong>Due:</strong>{" "}
                 {todo.dueDate ? new Date(todo.dueDate).toDateString() : "N/A"}
               </p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleUpdateClick(todo)}
-                className="bg-blue-500 text-white px-2 rounded"
-              >
-                Update
-              </button>
-
-              <button
-                onClick={() => handleUpdate(todo._id, { status: "done" })}
-                className="bg-green-500 text-white px-2 rounded"
-              >
-                Done
-              </button>
-              <button
-                onClick={() => handleDelete(todo._id)}
-                className="bg-red-500 text-white px-2 rounded"
-              >
-                Delete
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
+              {todo.description && (
+                <p>
+                  <strong>Description:</strong> {todo.description}
+                </p>
+              )}
+            </Card>
+          </List.Item>
+        )}
+      />
 
       {/* Update Modal */}
       <Modal
@@ -236,6 +302,7 @@ const TodoList: React.FC = () => {
         open={isModalVisible}
         onCancel={handleCancel}
         footer={null}
+        className="max-w-md mx-auto"
       >
         <Form
           form={form}
@@ -255,19 +322,11 @@ const TodoList: React.FC = () => {
             <Input placeholder="Enter todo title" />
           </Form.Item>
 
-          <Form.Item
-            label="Description"
-            name="description"
-            rules={[{ required: false }]}
-          >
+          <Form.Item label="Description" name="description">
             <Input.TextArea placeholder="Enter todo description" rows={4} />
           </Form.Item>
 
-          <Form.Item
-            label="Due Date"
-            name="dueDate"
-            rules={[{ required: false }]}
-          >
+          <Form.Item label="Due Date" name="dueDate">
             <DatePicker className="w-full" format="YYYY-MM-DD" />
           </Form.Item>
 
@@ -293,22 +352,15 @@ const TodoList: React.FC = () => {
 
       {/* Pagination */}
       {pagination && (
-        <div className="flex gap-2 mt-4">
-          <button
-            disabled={filters.page <= 1}
-            onClick={() => setFilters({ ...filters, page: filters.page - 1 })}
-          >
-            Prev
-          </button>
-          <span>
-            Page {pagination.page} of {pagination.totalPages}
-          </span>
-          <button
-            disabled={filters.page >= pagination.totalPages}
-            onClick={() => setFilters({ ...filters, page: filters.page + 1 })}
-          >
-            Next
-          </button>
+        <div className="flex justify-center mt-6">
+          <Pagination
+            current={pagination.page}
+            total={pagination.totalItems}
+            pageSize={pagination.limit}
+            onChange={handlePaginationChange}
+            showSizeChanger={false}
+            responsive
+          />
         </div>
       )}
     </div>

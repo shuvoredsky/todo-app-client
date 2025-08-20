@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
 import axios from "axios";
-import { message } from "antd";
+import { message, Spin, Alert, Card, Modal, Button } from "antd";
 import AddTodo from "../page/AddToDo";
 import AllTodoList from "./AllTodoList";
 import TodoList from "./TodoList";
@@ -18,6 +18,7 @@ const Home: React.FC = () => {
   const userEmail = authContext?.user?.email;
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -28,7 +29,6 @@ const Home: React.FC = () => {
       }
 
       try {
-        console.log("Fetching user with email:", userEmail); // Debug
         const res = await axios.get("http://localhost:3000/users", {
           params: { email: userEmail },
         });
@@ -52,33 +52,87 @@ const Home: React.FC = () => {
   }, [userEmail]);
 
   if (loading) {
-    return <div className="text-center p-6">Loading...</div>;
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-gray-100">
+        <Spin size="large" tip="Loading your todos..." />
+      </div>
+    );
   }
 
   if (!user) {
-    return <div className="text-center p-6">Please sign in to continue</div>;
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-gray-100">
+        <Alert
+          message="Authentication Required"
+          description="Please sign in to access your todos."
+          type="warning"
+          showIcon
+          className="max-w-md"
+        />
+      </div>
+    );
   }
 
+  const showAddModal = () => {
+    setIsAddModalVisible(true);
+  };
+
+  const handleAddModalCancel = () => {
+    setIsAddModalVisible(false);
+  };
+
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Welcome, {user.email}</h1>
-      <p className="text-gray-600 mb-4">Your role: {user.role}</p>
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto min-h-screen bg-gray-100">
+      <h1 className="text-2xl sm:text-3xl font-bold text-center text-blue-600 mb-6">
+        Welcome, {user.name || "User"}!
+      </h1>
       {user.role === "user" ? (
-        <div className="flex flex-col md:flex-row gap-6 justify-center items-start">
-          <div className="w-full md:w-1/2">
-            <AddTodo />
-          </div>
-          <div className="w-full md:w-1/2">
-            <TodoList />
+        <div className="grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="flex flex-col gap-4">
+            <Card
+              title="Your Todos"
+              className="shadow-lg"
+              headStyle={{ background: "#1890ff", color: "white" }}
+            >
+              <TodoList />
+            </Card>
+            <Button
+              type="primary"
+              className="w-full lg:w-auto"
+              onClick={showAddModal}
+            >
+              Add Task
+            </Button>
           </div>
         </div>
       ) : user.role === "admin" ? (
-        <div>
+        <Card
+          title="All Todos"
+          className="shadow-lg"
+          headStyle={{ background: "#1890ff", color: "white" }}
+        >
           <AllTodoList />
-        </div>
+        </Card>
       ) : (
-        <div className="text-center p-6">Invalid user role</div>
+        <Alert
+          message="Invalid Role"
+          description="Your user role is invalid. Please contact support."
+          type="error"
+          showIcon
+          className="max-w-md mx-auto"
+        />
       )}
+
+      {/* Add Todo Modal */}
+      <Modal
+        title="Add New Task"
+        open={isAddModalVisible}
+        onCancel={handleAddModalCancel}
+        footer={null}
+        className="max-w-md mx-auto"
+      >
+        <AddTodo onAddSuccess={handleAddModalCancel} />
+      </Modal>
     </div>
   );
 };

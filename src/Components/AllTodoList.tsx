@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { Button, Select, message } from "antd";
 import moment from "moment";
+import useAxiosSecure from "./hook/useAxiosSecure";
 
 const { Option } = Select;
 
@@ -17,7 +17,9 @@ interface Todo {
 }
 
 const AllTodoList: React.FC = () => {
+  const axiosSecure = useAxiosSecure();
   const [todos, setTodos] = useState<Todo[]>([]);
+  const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({
     status: "",
     priority: "",
@@ -31,17 +33,20 @@ const AllTodoList: React.FC = () => {
   const [pagination, setPagination] = useState<any>(null);
 
   const fetchTodos = async () => {
+    setLoading(true);
     try {
       console.log("Fetching Todos with Params:", filters); // Debug
-      const res = await axios.get("http://localhost:3000/todos", {
+      const res = await axiosSecure.get("/todos", {
         params: filters,
       });
-      // console.log("Fetch Todos Response:", res.data); // Debug
+      console.log("Fetch Todos Response:", res.data); // Debug
       setTodos(res.data.data);
       setPagination(res.data.pagination);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Fetch Todos Error:", err);
-      message.error("Error fetching todos");
+      message.error(err.response?.data?.message || "Error fetching todos");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -115,48 +120,61 @@ const AllTodoList: React.FC = () => {
         </Select>
       </div>
 
-      {/* Todo List */}
-      <div className="grid gap-4">
-        {todos.map((todo) => (
-          <div
-            key={todo._id}
-            className="border rounded-lg p-4 bg-white shadow-md"
-          >
-            <h3 className="text-lg font-semibold">{todo.title}</h3>
-            <p className="text-gray-600">User: {todo.userEmail}</p>
-            <p className="text-gray-600">Priority: {todo.priority}</p>
-            <p className="text-gray-600">Status: {todo.status}</p>
-            <p className="text-gray-500 text-sm">
-              Created: {moment(todo.createdAt).format("YYYY-MM-DD HH:mm")}
-            </p>
-            {todo.dueDate && (
-              <p className="text-gray-500 text-sm">
-                Due: {moment(todo.dueDate).format("YYYY-MM-DD")}
-              </p>
-            )}
+      {/* Loading State */}
+      {loading ? (
+        <div className="text-center p-6">Loading...</div>
+      ) : todos.length === 0 ? (
+        <div className="text-center p-6">No todos found</div>
+      ) : (
+        <>
+          {/* Todo List */}
+          <div className="grid gap-4">
+            {todos.map((todo) => (
+              <div
+                key={todo._id}
+                className="border rounded-lg p-4 bg-white shadow-md"
+              >
+                <h3 className="text-lg font-semibold">{todo.title}</h3>
+                <p className="text-gray-600">User: {todo.userEmail}</p>
+                <p className="text-gray-600">Priority: {todo.priority}</p>
+                <p className="text-gray-600">Status: {todo.status}</p>
+                <p className="text-gray-500 text-sm">
+                  Created: {moment(todo.createdAt).format("YYYY-MM-DD HH:mm")}
+                </p>
+                {todo.dueDate && (
+                  <p className="text-gray-500 text-sm">
+                    Due: {moment(todo.dueDate).format("YYYY-MM-DD")}
+                  </p>
+                )}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* Pagination */}
-      {pagination && (
-        <div className="flex justify-center gap-4 mt-6">
-          <Button
-            disabled={filters.page <= 1}
-            onClick={() => setFilters({ ...filters, page: filters.page - 1 })}
-          >
-            Previous
-          </Button>
-          <span>
-            Page {pagination.page} of {pagination.totalPages}
-          </span>
-          <Button
-            disabled={filters.page >= pagination.totalPages}
-            onClick={() => setFilters({ ...filters, page: filters.page + 1 })}
-          >
-            Next
-          </Button>
-        </div>
+          {/* Pagination */}
+          {pagination && (
+            <div className="flex justify-center gap-4 mt-6">
+              <Button
+                disabled={filters.page <= 1}
+                onClick={() =>
+                  setFilters({ ...filters, page: filters.page - 1 })
+                }
+              >
+                Previous
+              </Button>
+              <span>
+                Page {pagination.page} of {pagination.totalPages}
+              </span>
+              <Button
+                disabled={filters.page >= pagination.totalPages}
+                onClick={() =>
+                  setFilters({ ...filters, page: filters.page + 1 })
+                }
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
