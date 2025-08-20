@@ -71,15 +71,9 @@ const TodoList: React.FC = () => {
     fetchTodos();
   };
 
-  const handleUpdate = (todo: Todo) => {
-    setSelectedTodo(todo);
-    form.setFieldsValue({
-      title: todo.title,
-      description: todo.description,
-      dueDate: todo.dueDate ? moment(todo.dueDate) : undefined,
-      priority: todo.priority,
-    });
-    setIsModalVisible(true);
+  const handleUpdate = async (id: string, updates: any) => {
+    await axios.put(`http://localhost:3000/todos/${id}`, updates);
+    fetchTodos();
   };
 
   const handleUpdateSubmit = async (values: UpdateTodoFormValues) => {
