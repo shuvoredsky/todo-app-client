@@ -77,7 +77,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               accessToken,
             });
           } catch (error) {
-            console.error("Error getting access token:", error); // Debug
+            console.error("Error getting access token:", error);
             setUser(null);
           }
         } else {

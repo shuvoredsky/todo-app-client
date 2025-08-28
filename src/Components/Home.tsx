@@ -1,10 +1,11 @@
 import React, { useContext, useEffect, useState } from "react";
-import axios from "axios";
+
 import { message, Spin, Alert, Card, Modal, Button } from "antd";
 import AddTodo from "../page/AddToDo";
 import AllTodoList from "./AllTodoList";
 import TodoList from "./TodoList";
 import { AuthContext, type AuthContextType } from "../provider/AuthProvider";
+import useAxiosSecure from "./hook/useAxiosSecure";
 
 interface User {
   _id: string;
@@ -14,6 +15,7 @@ interface User {
 }
 
 const Home: React.FC = () => {
+  const axiosSecure = useAxiosSecure();
   const authContext = useContext<AuthContextType | null>(AuthContext);
   const userEmail = authContext?.user?.email;
   const [user, setUser] = useState<User | null>(null);
@@ -28,11 +30,14 @@ const Home: React.FC = () => {
         return;
       }
 
+      // const user = authContext?.user;
+      console.log(user);
+
       try {
-        const res = await axios.get("http://localhost:3000/users", {
+        const res = await axiosSecure.get("/users", {
           params: { email: userEmail },
         });
-        console.log("Fetch User Response:", res.data); // Debug
+        console.log("Fetch User Response:", res);
         if (res.data.success && res.data.data.length > 0) {
           setUser(res.data.data[0]);
         } else {
@@ -123,7 +128,6 @@ const Home: React.FC = () => {
         />
       )}
 
-      {/* Add Todo Modal */}
       <Modal
         title="Add New Task"
         open={isAddModalVisible}

@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { useContext } from "react";
 import { Navigate } from "react-router";
-import { AuthContext, AuthContextType } from "../provider/AuthProvider";
+import type { AuthContextType } from "../provider/AuthProvider";
+import { AuthContext } from "../provider/AuthProvider";
 
 interface PrivateRouteProps {
   children: ReactNode;

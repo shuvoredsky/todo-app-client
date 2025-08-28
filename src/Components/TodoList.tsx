@@ -167,7 +167,6 @@ const TodoList: React.FC = () => {
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto bg-gray-100 min-h-[400px]">
-      {/* Filters */}
       <Form
         layout="vertical"
         className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
@@ -243,7 +242,6 @@ const TodoList: React.FC = () => {
         </Form.Item>
       </Form>
 
-      {/* Todo List */}
       <List
         grid={{ gutter: 16, xs: 1, sm: 1, md: 2, lg: 2, xl: 3 }}
         dataSource={todos}
@@ -260,11 +258,7 @@ const TodoList: React.FC = () => {
                 >
                   Update
                 </Button>,
-                <Button
-                  type="link"
-                  onClick={() => handleUpdate(todo._id, { status: "done" })}
-                  className="text-green-500"
-                >
+                <Button type="link" className="text-green-500">
                   Done
                 </Button>,
                 <Button

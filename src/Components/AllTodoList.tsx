@@ -35,11 +35,10 @@ const AllTodoList: React.FC = () => {
   const fetchTodos = async () => {
     setLoading(true);
     try {
-      console.log("Fetching Todos with Params:", filters); // Debug
       const res = await axiosSecure.get("/todos", {
         params: filters,
       });
-      console.log("Fetch Todos Response:", res.data); // Debug
+
       setTodos(res.data.data);
       setPagination(res.data.pagination);
     } catch (err: any) {

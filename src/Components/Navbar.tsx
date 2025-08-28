@@ -13,6 +13,8 @@ const Navbar: React.FC = () => {
   const navigate = useNavigate();
 
   const user = authContext?.user;
+  console.log(user);
+
   const logOut = authContext?.logOut;
 
   const handleLogOut = () => {
@@ -43,7 +45,7 @@ const Navbar: React.FC = () => {
             <Space>
               <UserOutlined style={{ color: "white" }} />
               <span className="text-white font-medium">
-                {user?.displayName || "User"}
+                {user?.displayName}
               </span>
               <Button
                 type="text"

@@ -6,7 +6,7 @@ import { signOut } from "firebase/auth";
 import { auth } from "../../firebase/firebase-init";
 
 const axiosSecure: AxiosInstance = axios.create({
-  baseURL: "http://localhost:3000",
+  baseURL: "https://todo-api-c8fy.onrender.com",
 });
 
 const useAxiosSecure = () => {

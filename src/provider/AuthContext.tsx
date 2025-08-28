@@ -1,7 +1,6 @@
 import { createContext } from "react";
 import type { User, UserProfile } from "firebase/auth";
 
-// Context type define
 export interface AuthContextType {
   user: User | null;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
@@ -13,5 +12,4 @@ export interface AuthContextType {
   setLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-// Default context
 export const AuthContext = createContext<AuthContextType | null>(null);
